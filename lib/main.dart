@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme.dart';
-import 'screens/swipe_screen.dart';
+import 'screens/onboarding/welcome_screen.dart';
 
 void main() => runApp(const SynqApp());
 
@@ -12,7 +12,7 @@ class SynqApp extends StatelessWidget {
       title: 'Synq',
       debugShowCheckedModeBanner: false,
       theme: SynqTheme.build(),
-      home: const SwipeScreen(),
+      home: const WelcomeScreen(),
     );
   }
 }
