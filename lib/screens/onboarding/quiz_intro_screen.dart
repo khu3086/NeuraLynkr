@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme.dart';
 import 'permissions_screen.dart';
+import 'quiz_screen.dart';
 
 class QuizIntroScreen extends StatelessWidget {
   const QuizIntroScreen({super.key});
@@ -68,9 +69,7 @@ class QuizIntroScreen extends StatelessWidget {
                     label: 'Start the quiz',
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const PermissionsScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const QuizScreen()),
                     ),
                   ),
                   const SizedBox(height: 16),
