@@ -9,14 +9,102 @@ class SwipeScreen extends StatefulWidget {
   State<SwipeScreen> createState() => _SwipeScreenState();
 }
 
-class _SwipeScreenState extends State<SwipeScreen> {
+class _SwipeScreenState extends State<SwipeScreen>
+    with SingleTickerProviderStateMixin {
   int idx = 0;
   int tabIdx = 2;
 
-  void next() => setState(() => idx = (idx + 1) % mockMatches.length);
+  Offset dragOffset = Offset.zero;
+  bool isAnimating = false;
+
+  late AnimationController _resetCtrl;
+  late Animation<Offset> _resetAnim;
+
+  static const double swipeThreshold = 120.0;
+  static const double screenWidth = 400.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _resetCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _resetAnim =
+        Tween<Offset>(begin: Offset.zero, end: Offset.zero).animate(
+          CurvedAnimation(parent: _resetCtrl, curve: Curves.easeOut),
+        )..addListener(() {
+          setState(() => dragOffset = _resetAnim.value);
+        });
+  }
+
+  @override
+  void dispose() {
+    _resetCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onPanUpdate(DragUpdateDetails d) {
+    if (isAnimating) return;
+    setState(() => dragOffset += d.delta);
+  }
+
+  void _onPanEnd(DragEndDetails d) {
+    if (isAnimating) return;
+    if (dragOffset.dx > swipeThreshold) {
+      _flyOff(true);
+    } else if (dragOffset.dx < -swipeThreshold) {
+      _flyOff(false);
+    } else {
+      _springBack();
+    }
+  }
+
+  void _springBack() {
+    _resetAnim =
+        Tween<Offset>(begin: dragOffset, end: Offset.zero).animate(
+          CurvedAnimation(parent: _resetCtrl, curve: Curves.easeOut),
+        )..addListener(() {
+          setState(() => dragOffset = _resetAnim.value);
+        });
+    _resetCtrl.forward(from: 0);
+  }
+
+  void _flyOff(bool liked) {
+    setState(() => isAnimating = true);
+    final target = Offset(
+      liked ? screenWidth * 2 : -screenWidth * 2,
+      dragOffset.dy,
+    );
+    _resetAnim =
+        Tween<Offset>(begin: dragOffset, end: target).animate(
+          CurvedAnimation(parent: _resetCtrl, curve: Curves.easeIn),
+        )..addListener(() {
+          setState(() => dragOffset = _resetAnim.value);
+        });
+    _resetCtrl.forward(from: 0).then((_) {
+      setState(() {
+        idx = (idx + 1) % mockMatches.length;
+        dragOffset = Offset.zero;
+        isAnimating = false;
+      });
+    });
+  }
+
+  void _triggerButton(bool liked) {
+    if (isAnimating) return;
+    setState(() => dragOffset = Offset(liked ? 20 : -20, 0));
+    _flyOff(liked);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final rotation = dragOffset.dx / 1000;
+    final likeOpacity = (dragOffset.dx / swipeThreshold).clamp(0.0, 1.0);
+    final skipOpacity = (-dragOffset.dx / swipeThreshold).clamp(0.0, 1.0);
+
+    final backIdx = (idx + 1) % mockMatches.length;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -31,12 +119,94 @@ class _SwipeScreenState extends State<SwipeScreen> {
                     onChange: (i) => setState(() => tabIdx = i),
                   ),
                   const SizedBox(height: 20),
-                  Expanded(child: MatchCard(match: mockMatches[idx])),
+                  Expanded(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Transform.scale(
+                          scale: 0.95,
+                          child: Opacity(
+                            opacity: 0.6,
+                            child: MatchCard(match: mockMatches[backIdx]),
+                          ),
+                        ),
+                        Transform.translate(
+                          offset: dragOffset,
+                          child: Transform.rotate(
+                            angle: rotation,
+                            child: GestureDetector(
+                              onPanUpdate: _onPanUpdate,
+                              onPanEnd: _onPanEnd,
+                              child: Stack(
+                                children: [
+                                  MatchCard(match: mockMatches[idx]),
+                                  Positioned(
+                                    top: 30,
+                                    left: 20,
+                                    child: Opacity(
+                                      opacity: likeOpacity,
+                                      child: _StampLabel(
+                                        text: 'LIKE',
+                                        color: SynqTheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 30,
+                                    right: 20,
+                                    child: Opacity(
+                                      opacity: skipOpacity,
+                                      child: _StampLabel(
+                                        text: 'SKIP',
+                                        color: Colors.red.shade400,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 18),
-                  _Actions(onSkip: next, onLike: next),
+                  _Actions(
+                    onSkip: () => _triggerButton(false),
+                    onLike: () => _triggerButton(true),
+                  ),
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StampLabel extends StatelessWidget {
+  final String text;
+  final Color color;
+  const _StampLabel({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: text == 'LIKE' ? -0.2 : 0.2,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          border: Border.all(color: color, width: 3),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: color,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 2,
           ),
         ),
       ),
