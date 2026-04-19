@@ -1,0 +1,10 @@
+.dart_tool/
+.idea/
+build/
+.packages
+.pub-cache/
+.pub/
+.vscode/
+*.iml
+*.log
+.env
