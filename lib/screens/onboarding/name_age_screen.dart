@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme.dart';
+import '../../services/api.dart';
 import 'quiz_intro_screen.dart';
 
 class NameAgeScreen extends StatefulWidget {
@@ -11,11 +12,45 @@ class NameAgeScreen extends StatefulWidget {
 class _NameAgeScreenState extends State<NameAgeScreen> {
   final _nameCtrl = TextEditingController();
   final _ageCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+
+  bool _loading = false;
+  String? _error;
 
   bool get _valid =>
       _nameCtrl.text.trim().isNotEmpty &&
+      _emailCtrl.text.contains('@') &&
+      _passCtrl.text.length >= 8 &&
       int.tryParse(_ageCtrl.text) != null &&
       int.parse(_ageCtrl.text) >= 18;
+
+  Future<void> _submit() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      await ApiClient.signup(
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text,
+        displayName: _nameCtrl.text.trim(),
+        age: int.parse(_ageCtrl.text),
+      );
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const QuizIntroScreen()),
+      );
+    } on ApiException catch (e) {
+      setState(() => _error = e.message);
+    } catch (e) {
+      setState(() => _error = 'Could not reach the server. Is it running?');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +60,7 @@ class _NameAgeScreenState extends State<NameAgeScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -37,32 +72,59 @@ class _NameAgeScreenState extends State<NameAgeScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'This is how you\'ll appear to your matches.',
+                    'Create your account. Minimum 8-character password.',
                     style: TextStyle(fontSize: 14, color: SynqTheme.textMuted),
                   ),
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 28),
                   _Field(
                     label: 'Your name',
                     controller: _nameCtrl,
                     onChange: (_) => setState(() {}),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   _Field(
                     label: 'Age',
                     controller: _ageCtrl,
                     keyboardType: TextInputType.number,
                     onChange: (_) => setState(() {}),
                   ),
-                  const Spacer(),
-                  _PrimaryButton(
-                    label: 'Continue',
-                    enabled: _valid,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const QuizIntroScreen(),
+                  const SizedBox(height: 16),
+                  _Field(
+                    label: 'Email',
+                    controller: _emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    onChange: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 16),
+                  _Field(
+                    label: 'Password',
+                    controller: _passCtrl,
+                    obscure: true,
+                    onChange: (_) => setState(() {}),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFCEBEB),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFF7C1C1)),
+                      ),
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFFA32D2D),
+                        ),
                       ),
                     ),
+                  ],
+                  const SizedBox(height: 28),
+                  _PrimaryButton(
+                    label: _loading ? 'Creating account…' : 'Continue',
+                    enabled: _valid && !_loading,
+                    onTap: _submit,
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -79,12 +141,14 @@ class _Field extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final TextInputType? keyboardType;
+  final bool obscure;
   final ValueChanged<String> onChange;
   const _Field({
     required this.label,
     required this.controller,
     required this.onChange,
     this.keyboardType,
+    this.obscure = false,
   });
 
   @override
@@ -106,6 +170,7 @@ class _Field extends StatelessWidget {
           controller: controller,
           onChanged: onChange,
           keyboardType: keyboardType,
+          obscureText: obscure,
           style: const TextStyle(fontSize: 16, color: SynqTheme.textMain),
           decoration: InputDecoration(
             filled: true,

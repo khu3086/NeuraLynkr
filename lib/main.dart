@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'theme.dart';
+import 'services/api.dart';
 import 'screens/onboarding/welcome_screen.dart';
+import 'screens/swipe_screen.dart';
 
-void main() => runApp(const SynqApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ApiClient.init();
+  runApp(const SynqApp());
+}
 
 class SynqApp extends StatelessWidget {
   const SynqApp({super.key});
@@ -12,7 +18,7 @@ class SynqApp extends StatelessWidget {
       title: 'Synq',
       debugShowCheckedModeBanner: false,
       theme: SynqTheme.build(),
-      home: const WelcomeScreen(),
+      home: ApiClient.isLoggedIn ? const SwipeScreen() : const WelcomeScreen(),
     );
   }
 }
