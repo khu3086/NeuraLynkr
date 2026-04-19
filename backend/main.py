@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from app.services.supabase_client import get_supabase
+
 app = FastAPI(title="Synq API", version="0.1.0")
 
 app.add_middleware(
@@ -20,3 +22,9 @@ async def root():
 @app.get("/health")
 async def health():
     return {"healthy": True}
+
+@app.get("/health/db")
+async def health_db():
+    supabase = get_supabase()
+    result = supabase.table("profiles").select("id").limit(1).execute()
+    return {"db": "connected", "rows": len(result.data)}
