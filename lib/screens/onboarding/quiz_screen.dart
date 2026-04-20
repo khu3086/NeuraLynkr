@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/quiz_questions.dart';
 import '../../theme.dart';
 import 'permissions_screen.dart';
+import '../../services/api.dart';
 
 class QuizScreen extends StatefulWidget {
   const QuizScreen({super.key});
@@ -18,15 +19,31 @@ class _QuizScreenState extends State<QuizScreen> {
     Future.delayed(const Duration(milliseconds: 220), _next);
   }
 
-  void _next() {
+  Future<void> _next() async {
     if (qIdx < quizQuestions.length - 1) {
       setState(() => qIdx++);
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const PermissionsScreen()),
-      );
+      return;
     }
+
+    final payload = answers.entries
+        .map((e) => {'question_idx': e.key, 'answer_idx': e.value})
+        .toList();
+
+    try {
+      await ApiClient.submitQuizAnswers(payload);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save quiz: $e')));
+      return;
+    }
+
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const PermissionsScreen()),
+    );
   }
 
   void _back() {

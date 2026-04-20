@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from app.services.supabase_client import get_supabase
-from app.routers import auth, profiles
+from app.routers import auth, profiles, quiz
 
 app = FastAPI(title="Synq API", version="0.1.0")
 
@@ -18,6 +18,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(profiles.router, prefix="/profiles", tags=["profiles"])
+app.include_router(quiz.router, prefix="/quiz", tags=["quiz"])
 
 @app.get("/")
 async def root():

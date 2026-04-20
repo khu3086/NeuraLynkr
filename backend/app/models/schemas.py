@@ -24,3 +24,10 @@ class ProfileResponse(BaseModel):
     bio: Optional[str] = None
     mode: str
     tier: str
+
+class QuizAnswerItem(BaseModel):
+    question_idx: int = Field(..., ge=0)
+    answer_idx: int = Field(..., ge=0)
+
+class QuizSubmission(BaseModel):
+    answers: list[QuizAnswerItem]

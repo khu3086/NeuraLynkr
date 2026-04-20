@@ -91,6 +91,21 @@ class ApiClient {
     return jsonDecode(response.body);
   }
 
+  static Future<void> submitQuizAnswers(List<Map<String, int>> answers) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/quiz/answers'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $_accessToken',
+      },
+      body: jsonEncode({'answers': answers}),
+    );
+
+    if (response.statusCode != 200) {
+      throw ApiException(_extractError(response));
+    }
+  }
+
   static String _extractError(http.Response r) {
     try {
       final data = jsonDecode(r.body);
